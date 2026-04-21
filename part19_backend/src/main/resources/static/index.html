@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>E-Commerce Admin - Product CRUD</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f8f9fa; padding: 20px; }
+        .container { max-width: 900px; background: white; padding: 30px; border-radius: 10px; shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .table img { width: 50px; height: 50px; object-fit: cover; }
+    </style>
+</head>
+<body>
+
+<div class="container shadow-sm">
+    <h2 class="mb-4">Product Management</h2>
+
+    <div class="card mb-4">
+        <div class="card-header" id="formTitle">Add New Product</div>
+        <div class="card-body">
+            <form id="productForm">
+                <input type="hidden" id="prodId">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Product Name</label>
+                        <input type="text" id="prodName" class="form-control" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Price</label>
+                        <input type="number" id="price" class="form-control" required>
+                    </div>
+                    <div class="col-12">
+                        <button type="submit" class="btn btn-primary" id="saveBtn">Save Product</button>
+                        <button type="button" class="btn btn-secondary" onclick="resetForm()">Clear</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <table class="table table-hover">
+        <thead class="table-dark">
+        <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Price</th>
+            <th>Actions</th>
+        </tr>
+        </thead>
+        <tbody id="productTableBody">
+        </tbody>
+    </table>
+</div>
+
+<script>
+    const API_URL = 'http://localhost:8080/products';
+
+    // 1. Fetch all products (GET)
+    async function loadProducts() {
+        try {
+            const response = await fetch(API_URL);
+            const products = await response.json();
+            const tableBody = document.getElementById('productTableBody');
+            tableBody.innerHTML = '';
+
+            products.forEach(p => {
+                tableBody.innerHTML += `
+                    <tr>
+                        <td>${p.prodId}</td>
+                        <td>${p.prodName}</td>
+                        <td>$${p.price}</td>
+                        <td>
+                            <button class="btn btn-sm btn-warning" onclick="editProduct(${p.prodId})">Edit</button>
+                            <button class="btn btn-sm btn-danger" onclick="deleteProduct(${p.prodId})">Delete</button>
+                        </td>
+                    </tr>
+                `;
+            });
+        } catch (error) {
+            console.error("Error loading products:", error);
+        }
+    }
+
+    // 2. Add or Update Product (POST/PUT)
+    document.getElementById('productForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const id = document.getElementById('prodId').value;
+        const productData = {
+            prodName: document.getElementById('prodName').value,
+            price: document.getElementById('price').value
+        };
+
+        if (id) {
+            // Update (PUT)
+            productData.prodId = id;
+            await fetch(API_URL, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(productData)
+            });
+        } else {
+            // Create (POST)
+            await fetch(API_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(productData)
+            });
+        }
+
+        resetForm();
+        loadProducts();
+    });
+
+    // 3. Delete Product (DELETE)
+    async function deleteProduct(id) {
+        if(confirm('Are you sure?')) {
+            await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
+            loadProducts();
+        }
+    }
+
+    // 4. Edit Helper (GET by ID)
+    async function editProduct(id) {
+        const response = await fetch(`${API_URL}/${id}`);
+        const p = await response.json();
+
+        document.getElementById('prodId').value = p.prodId;
+        document.getElementById('prodName').value = p.prodName;
+        document.getElementById('price').value = p.price;
+
+        document.getElementById('formTitle').innerText = "Edit Product";
+        document.getElementById('saveBtn').innerText = "Update Product";
+    }
+
+    function resetForm() {
+        document.getElementById('productForm').reset();
+        document.getElementById('prodId').value = '';
+        document.getElementById('formTitle').innerText = "Add New Product";
+        document.getElementById('saveBtn').innerText = "Save Product";
+    }
+
+    // Initial Load
+    loadProducts();
+</script>
+
+</body>
+</html>
